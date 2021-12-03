@@ -1,3 +1,4 @@
+use advent2021::from_file_data;
 use std::num;
 use std::str::FromStr;
 use thiserror::Error;
@@ -35,16 +36,6 @@ impl FromStr for Command {
             Err(Oopsie::CouldntParseCommand(s.to_string()))
         }
     }
-}
-
-fn from_file_data<T: FromStr>(filedata: &str) -> Result<Vec<T>, T::Err> {
-    let mut retval = Vec::new();
-
-    for line in filedata.lines() {
-        retval.push(T::from_str(line)?);
-    }
-
-    Ok(retval)
 }
 
 #[test]
