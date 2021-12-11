@@ -17,7 +17,7 @@ pub struct Graph<T> {
     height: usize,
 }
 
-impl<T: Clone + TryFrom<char, Error = Oopsie>> Graph<T> {
+impl<T: TryFrom<char, Error = Oopsie>> Graph<T> {
     pub fn from_file_data(file_data: &str) -> Result<Graph<T>, Oopsie> {
         let mut data = Vec::with_capacity(file_data.len());
         let mut width = None;
@@ -57,6 +57,12 @@ impl<T: Clone + TryFrom<char, Error = Oopsie>> Graph<T> {
             height,
         })
     }
+}
+
+impl<T> Graph<T> {
+    pub fn size(&self) -> usize {
+        self.width * self.height
+    }
 
     pub fn get(&self, x: usize, y: usize) -> Option<Point<T>> {
         if x >= self.width || y >= self.height {
@@ -70,12 +76,40 @@ impl<T: Clone + TryFrom<char, Error = Oopsie>> Graph<T> {
         })
     }
 
+    pub fn get_mut(&mut self, x: usize, y: usize) -> Option<PointMut<T>> {
+        if x >= self.width || y >= self.height {
+            return None;
+        }
+
+        Some(PointMut {
+            x,
+            y,
+            value: &mut self.data[(y * self.width) + x],
+        })
+    }
+
+    pub fn coordinates(&self) -> Coord<T> {
+        Coord {
+            graph: self,
+            curx: 0,
+            cury: 0,
+        }
+    }
+
     pub fn points(&self) -> Points<'_, T> {
         Points {
             graph: self,
             curx: 0,
             cury: 0,
         }
+    }
+
+    pub fn points_mut(&mut self) -> impl Iterator<Item = PointMut<T>> {
+        let coords: Vec<(usize, usize)> = self.coordinates().collect();
+        self.data
+            .iter_mut()
+            .zip(coords)
+            .map(|(value, (x, y))| PointMut { x, y, value })
     }
 
     pub fn neighbors(&self, x: usize, y: usize) -> Vec<Point<T>> {
@@ -96,6 +130,50 @@ impl<T: Clone + TryFrom<char, Error = Oopsie>> Graph<T> {
 
         retval
     }
+
+    pub fn neighbor_points(&mut self, x: usize, y: usize) -> Vec<(usize, usize)> {
+        let mut retval = Vec::new();
+
+        if y > 0 {
+            if x > 0 {
+                retval.push((x - 1, y - 1));
+            }
+            retval.push((x, y - 1));
+            if x + 1 < self.width {
+                retval.push((x + 1, y - 1))
+            };
+        }
+
+        if x > 0 {
+            retval.push((x - 1, y))
+        };
+        if x + 1 < self.width {
+            retval.push((x + 1, y))
+        };
+
+        if y + 1 < self.width {
+            if x > 0 {
+                retval.push((x - 1, y + 1))
+            };
+            retval.push((x, y + 1));
+            if x + 1 < self.width {
+                retval.push((x + 1, y + 1))
+            };
+        }
+
+        retval
+    }
+}
+
+impl<T: fmt::Display> Graph<T> {
+    pub fn print(&self) {
+        for y in 0..self.height {
+            for x in 0..self.width {
+                print!("{}", self.get(x, y).unwrap().value);
+            }
+            println!();
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -114,6 +192,50 @@ impl<'a, T> fmt::Debug for Point<'a, T> {
 impl<'a, T> PartialEq for Point<'a, T> {
     fn eq(&self, other: &Self) -> bool {
         self.x == other.x && self.y == other.y
+    }
+}
+
+pub struct PointMut<'a, T> {
+    pub x: usize,
+    pub y: usize,
+    pub value: &'a mut T,
+}
+
+impl<'a, T> fmt::Debug for PointMut<'a, T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "({},{})", self.x, self.y)
+    }
+}
+
+impl<'a, T> PartialEq for PointMut<'a, T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.x == other.x && self.y == other.y
+    }
+}
+
+pub struct Coord<'a, T> {
+    graph: &'a Graph<T>,
+    curx: usize,
+    cury: usize,
+}
+
+impl<'a, T> Iterator for Coord<'a, T> {
+    type Item = (usize, usize);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.cury == self.graph.height {
+            return None;
+        }
+
+        let next_value = (self.curx, self.cury);
+
+        self.curx += 1;
+        if self.curx == self.graph.width {
+            self.curx = 0;
+            self.cury += 1;
+        }
+
+        Some(next_value)
     }
 }
 
