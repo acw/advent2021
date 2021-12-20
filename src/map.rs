@@ -13,8 +13,18 @@ pub enum Oopsie {
 
 pub struct Graph<T> {
     data: Vec<T>,
-    width: usize,
-    height: usize,
+    pub width: usize,
+    pub height: usize,
+}
+
+impl<T: Clone> Clone for Graph<T> {
+    fn clone(&self) -> Self {
+        Graph {
+            data: self.data.clone(),
+            width: self.width,
+            height: self.height,
+        }
+    }
 }
 
 impl<T: TryFrom<char, Error = Oopsie>> Graph<T> {
@@ -56,6 +66,39 @@ impl<T: TryFrom<char, Error = Oopsie>> Graph<T> {
             width: width.unwrap(),
             height,
         })
+    }
+}
+
+impl<T: Clone> Graph<T> {
+    pub fn from_subgraphs(num_wide: usize, num_high: usize, graphs: &[Graph<T>]) -> Graph<T> {
+        let inner_width = graphs[0].width;
+        let inner_height = graphs[0].height;
+        let width = num_wide * inner_width;
+        let height = num_high * inner_height;
+        let mut data = Vec::with_capacity(width * height);
+
+        for y in 0..height {
+            for x in 0..width {
+                let graph_x = x / inner_width;
+                let idx_x = x % inner_width;
+                let graph_y = y / inner_height;
+                let idx_y = y % inner_height;
+
+                data.push(
+                    graphs[(graph_y * num_wide) + graph_x]
+                        .get(idx_x, idx_y)
+                        .unwrap()
+                        .value
+                        .clone(),
+                );
+            }
+        }
+
+        Graph {
+            data,
+            width,
+            height,
+        }
     }
 }
 

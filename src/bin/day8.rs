@@ -269,7 +269,7 @@ impl<'a> ProblemInput<'a> {
             .map(build_local_iterator)
             .multi_cartesian_product()
             .map(|x| HashMap::from_iter(x.iter().cloned()))
-            .filter(|x| reasonable_assignments(x));
+            .filter(reasonable_assignments);
 
         for assignments in possibles {
             if self.assignments_validate(&assignments) {
